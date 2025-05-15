@@ -16,6 +16,35 @@ st.set_page_config(
 if 'page' not in st.session_state:
     st.session_state.page = "Home"
 
+# Initialize session state for tasks if not exists
+if 'tasks' not in st.session_state:
+    st.session_state.tasks = [
+        {"title": "Complete Assessment", "due": "Today", "completed": False},
+        {"title": "Update Profile", "due": "Tomorrow", "completed": False}
+    ]
+
+def add_task(title, due_date):
+    st.session_state.tasks.append({"title": title, "due": due_date, "completed": False})
+
+def toggle_task(index):
+    st.session_state.tasks[index]["completed"] = not st.session_state.tasks[index]["completed"]
+
+def delete_task(index):
+    st.session_state.tasks.pop(index)
+
+# Custom component for navigation
+components = st.markdown("""
+    <script>
+    // Create a custom event handler
+    window.addEventListener('nav_change', function(e) {
+        // Update the session state
+        window.parent.stStreamlitPyObject.setComponentValue({
+            'page': e.detail.page
+        });
+    });
+    </script>
+""", unsafe_allow_html=True)
+
 # Custom CSS with responsive design
 st.markdown("""
     <style>
@@ -133,6 +162,36 @@ st.markdown("""
         background-color: white;
         transition: all 0.3s ease;
         font-size: clamp(0.8rem, 2vw, 1rem);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+        color: var(--text-color);
+    }
+
+    .nav-link:hover {
+        background-color: var(--primary-color);
+        color: white;
+        transform: translateX(5px);
+    }
+
+    .nav-link.active {
+        background-color: var(--primary-color);
+        color: white;
+    }
+
+    .nav-link .notification-badge {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 0.2rem 0.5rem;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        margin-left: auto;
+    }
+
+    .nav-link:hover .notification-badge {
+        background-color: white;
+        color: var(--primary-color);
     }
 
     /* Responsive testimonials */
@@ -187,19 +246,15 @@ with st.sidebar:
     
     for nav_item, details in nav_items.items():
         is_active = st.session_state.page == nav_item
-        notifications = details["notifications"]
         
-        # Create the navigation link with conditional styling
-        st.markdown(f"""
-            <div class='nav-link {"active" if is_active else ""}'>
-                <span>{details["icon"]}</span>
-                <span style='flex-grow: 1;'>{nav_item}</span>
-                {f'<span class="notification-badge">{notifications}</span>' if notifications > 0 else ''}
-            </div>
-        """, unsafe_allow_html=True)
-        
-        # Add the actual button (hidden but functional)
-        if st.button(nav_item, key=f"nav_{nav_item}", help=f"Navigate to {nav_item}"):
+        # Add the functional button with icon
+        if st.button(
+            f"{details['icon']} {nav_item}",
+            key=f"nav_{nav_item}",
+            help=f"Navigate to {nav_item}",
+            type="primary" if is_active else "secondary",
+            use_container_width=True
+        ):
             st.session_state.page = nav_item
     
     # Quick Stats
@@ -229,18 +284,46 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("<h4 class='sidebar-title'>Upcoming Tasks</h4>", unsafe_allow_html=True)
     
-    tasks = [
-        {"title": "Complete Assessment", "due": "Today"},
-        {"title": "Update Profile", "due": "Tomorrow"}
-    ]
+    # Add new task
+    with st.expander("➕ Add New Task"):
+        task_title = st.text_input("Task Title", key="new_task_title")
+        task_due = st.selectbox(
+            "Due Date",
+            ["Today", "Tomorrow", "This Week", "Next Week", "Custom"],
+            key="new_task_due"
+        )
+        
+        if task_due == "Custom":
+            task_due = st.date_input("Select Date", key="custom_date")
+            task_due = task_due.strftime("%Y-%m-%d")
+        
+        if st.button("Add Task"):
+            if task_title:  # Only add if title is not empty
+                add_task(task_title, task_due)
+                # Clear the input
+                st.session_state.new_task_title = ""
     
-    for task in tasks:
-        st.markdown(f"""
-            <div style='padding: 0.5rem; background-color: white; border-radius: 5px; margin: 0.5rem 0;'>
-                <small style='color: #666;'>{task['due']}</small>
-                <p style='margin: 0;'>{task['title']}</p>
-            </div>
-        """, unsafe_allow_html=True)
+    # Display tasks
+    for i, task in enumerate(st.session_state.tasks):
+        col1, col2, col3 = st.columns([1, 8, 1])
+        
+        with col1:
+            if st.checkbox("", task["completed"], key=f"task_{i}"):
+                toggle_task(i)
+        
+        with col2:
+            title_style = "text-decoration: line-through;" if task["completed"] else ""
+            st.markdown(f"""
+                <div style='padding: 0.5rem; background-color: white; border-radius: 5px; margin: 0.5rem 0;'>
+                    <small style='color: #666;'>{task['due']}</small>
+                    <p style='margin: 0; {title_style}'>{task['title']}</p>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            if st.button("🗑️", key=f"delete_task_{i}"):
+                delete_task(i)
+                st.experimental_rerun()
     
     # Footer
     st.markdown("""
@@ -337,8 +420,8 @@ if st.session_state.page == "Home":
     for feature in features:
         st.markdown(f"""
             <div class='feature-card'>
-                <h3>{feature['icon']} {feature['title']}</h3>
-                <p>{feature['description']}</p>
+                <h3 style='color: #FF4B4B;'>{feature['icon']} {feature['title']}</h3>
+                <p style='color: #666;'>{feature['description']}</p>
                 <small style='color: var(--primary-color);'>{feature['metric']}</small>
             </div>
         """, unsafe_allow_html=True)
@@ -671,4 +754,4 @@ elif st.session_state.page == "Personal Dashboard":
         1. AI/ML Development
         2. Cloud Computing
         3. Data Engineering
-        """) 
+        """)
