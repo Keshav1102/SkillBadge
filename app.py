@@ -1,16 +1,27 @@
 import streamlit as st
-import pandas as pd
-import plotly.express as px
-from PIL import Image
-import numpy as np
-
-# Page configuration
+# Page configuration must be the first Streamlit command
 st.set_page_config(
     page_title="MindForge - Career Guidance Platform",
     page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+
+import pandas as pd
+import plotly.express as px
+from PIL import Image
+import numpy as np
+from login import show_login_page, logout
+
+# Initialize session state for authentication
+if 'user' not in st.session_state:
+    st.session_state.user = None
+
+# Show login page if user is not authenticated
+if not st.session_state.user:
+    show_login_page()
+    st.stop()
 
 # Initialize session state for page navigation if not exists
 if 'page' not in st.session_state:
@@ -46,170 +57,184 @@ components = st.markdown("""
 """, unsafe_allow_html=True)
 
 # Custom CSS with responsive design
+# ...existing code...
 st.markdown("""
     <style>
-    /* Base styles */
+    /* Glassmorphism + Neumorphism + Vibrant Gradients */
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
     :root {
-        --primary-color: #FF4B4B;
-        --text-color: #1E1E1E;
-        --bg-light: #f8f9fa;
-        --spacing-unit: 1rem;
+        --primary-gradient: linear-gradient(135deg, #6D5BFF 0%, #46C9E5 100%);
+        --accent-gradient: linear-gradient(135deg, #FF6B6B 0%, #FFD93D 100%);
+        --glass-bg: rgba(34, 40, 49, 0.75);
+        --glass-blur: blur(18px);
+        --card-bg: rgba(255,255,255,0.10);
+        --border-glass: 1.5px solid rgba(255,255,255,0.25);
+        --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.25);
+        --radius: 22px;
+        --font: 'Montserrat', 'Segoe UI', 'Roboto', Arial, sans-serif;
+        --text-light: #f7f7fa;
+        --text-dark: #22223b;
+        --sidebar-width: 320px;
     }
-
-    /* Responsive container */
+    html, body, [class*="css"] {
+        font-family: var(--font) !important;
+        background: linear-gradient(120deg, #232526 0%, #414345 100%);
+        color: var(--text-light);
+    }
     .main {
         padding: 0 var(--spacing-unit);
         max-width: 1200px;
         margin: 0 auto;
     }
-
-    /* Responsive typography */
-    @media (max-width: 768px) {
-        h1 { font-size: 1.8rem !important; }
-        h2 { font-size: 1.5rem !important; }
-        h3 { font-size: 1.2rem !important; }
-        p { font-size: 0.9rem !important; }
+    /* Glassy sidebar */
+    section[data-testid="stSidebar"] {
+        background: var(--glass-bg) !important;
+        backdrop-filter: var(--glass-blur);
+        border-right: var(--border-glass);
+        box-shadow: var(--shadow);
+        min-width: var(--sidebar-width);
+        max-width: var(--sidebar-width);
     }
-
-    /* Responsive buttons */
+    /* Profile image with neon ring */
+    .profile-image {
+        width: 110px;
+        height: 110px;
+        border-radius: 50%;
+        border: 4px solid #FFD93D;
+        box-shadow: 0 0 0 6px #6D5BFF55, 0 4px 24px #0008;
+        margin: 0 auto 1rem auto;
+        display: block;
+        background: var(--card-bg);
+    }
+    /* Neumorphic buttons */
     .stButton>button {
         width: 100%;
-        background-color: var(--primary-color);
-        color: white;
-        border-radius: 10px;
-        padding: 0.5rem 1rem;
-        transition: all 0.3s ease;
-        font-size: clamp(0.8rem, 2vw, 1rem);
+        background: var(--primary-gradient);
+        color: #fff;
+        border-radius: var(--radius);
+        border: none;
+        padding: 0.8rem 1.4rem;
+        font-size: 1.1rem;
+        font-weight: 700;
+        box-shadow: 4px 4px 16px #23252655, -4px -4px 16px #6D5BFF33;
+        transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+        letter-spacing: 0.03em;
     }
-
-    /* Responsive cards */
-    .feature-card {
-        border: 1px solid #f0f0f0;
-        border-radius: 15px;
-        padding: clamp(1rem, 3vw, 1.5rem);
-        margin: 0.5rem 0;
-        background: white;
-        transition: all 0.3s ease;
-        height: 100%;
+    .stButton>button:hover {
+        background: var(--accent-gradient);
+        color: #232526;
+        transform: translateY(-2px) scale(1.04);
+        box-shadow: 0 8px 32px #FFD93D33;
     }
-
-    /* Responsive stat boxes */
+    /* Glassy cards */
+    .feature-card, .stat-box, .testimonial-card {
+        background: var(--card-bg);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        border: var(--border-glass);
+        backdrop-filter: var(--glass-blur);
+        padding: clamp(1.2rem, 3vw, 2rem);
+        margin: 0.7rem 0;
+        transition: box-shadow 0.2s, border 0.2s;
+    }
+    .feature-card:hover, .stat-box:hover, .testimonial-card:hover {
+        border: 2px solid #FFD93D;
+        box-shadow: 0 12px 36px #FFD93D33;
+    }
+    /* Stat boxes with gradient border */
     .stat-box {
-        background-color: var(--bg-light);
-        border-radius: 10px;
-        padding: clamp(0.8rem, 2vw, 1.5rem);
         text-align: center;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        transition: all 0.3s ease;
-        margin-bottom: var(--spacing-unit);
+        border: 2px solid transparent;
+        background: linear-gradient(var(--card-bg), var(--card-bg)) padding-box,
+                    var(--primary-gradient) border-box;
     }
-
-    /* Responsive sidebar */
-    .sidebar .sidebar-content {
-        background-color: var(--bg-light);
-        padding: clamp(0.5rem, 2vw, 1rem);
+    /* Navigation links with glassy effect */
+    .nav-link {
+        padding: 0.85rem 1.3rem;
+        margin: 0.5rem 0;
+        border-radius: var(--radius);
+        background: var(--card-bg);
+        color: #FFD93D;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        font-size: 1.05rem;
+        box-shadow: var(--shadow);
+        transition: background 0.2s, color 0.2s, border 0.2s;
+        text-decoration: none;
+        border: 2px solid transparent;
+        letter-spacing: 0.02em;
     }
-
-    @media (max-width: 768px) {
-        .sidebar .sidebar-content {
-            padding: 0.5rem;
-        }
-        .profile-image {
-            width: 60px !important;
-            height: 60px !important;
-        }
-        .nav-link {
-            padding: 0.5rem !important;
-        }
+    .nav-link.active, .nav-link:hover {
+        background: var(--primary-gradient);
+        color: #fff;
+        border: 2px solid #FFD93D;
     }
-
-    /* Responsive profile section */
-    .profile-section {
-        text-align: center;
-        padding: clamp(0.5rem, 2vw, 1rem);
-        margin-bottom: clamp(1rem, 3vw, 2rem);
+    .nav-link .notification-badge {
+        background: #FF6B6B;
+        color: #fff;
+        padding: 0.2rem 0.7rem;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        margin-left: auto;
+        font-weight: 700;
+        box-shadow: 0 2px 8px #FF6B6B44;
     }
-
-    .profile-image {
-        width: clamp(80px, 15vw, 100px);
-        height: clamp(80px, 15vw, 100px);
-        border-radius: 50%;
-        margin: 0 auto;
-        border: 3px solid var(--primary-color);
-        padding: 3px;
+    /* Testimonials with glass border */
+    .testimonial-card {
+        border-left: 6px solid #FFD93D;
+        font-style: italic;
+        background: var(--glass-bg);
+        color: #FFD93D;
     }
-
-    /* Responsive grid layouts */
+    /* Responsive grid with glassy cards */
     .grid-container {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
         gap: var(--spacing-unit);
         padding: var(--spacing-unit) 0;
     }
-
-    /* Responsive charts */
-    .chart-container {
-        width: 100%;
-        min-height: 300px;
-        max-height: 500px;
-    }
-
-    /* Responsive navigation */
-    .nav-link {
-        padding: clamp(0.5rem, 2vw, 0.75rem) clamp(0.75rem, 2vw, 1rem);
-        margin: 0.5rem 0;
-        border-radius: 10px;
-        background-color: white;
-        transition: all 0.3s ease;
-        font-size: clamp(0.8rem, 2vw, 1rem);
-        cursor: pointer;
+    /* Progress ring (neon) */
+    .progress-ring {
+        width: 110px;
+        height: 110px;
+        border-radius: 50%;
+        background: conic-gradient(#FFD93D 75%, #232526 0 100%);
+        margin: 1.5rem auto 1rem auto;
+        position: relative;
+        box-shadow: 0 0 24px #FFD93D88, 0 2px 8px #0008;
         display: flex;
         align-items: center;
-        text-decoration: none;
-        color: var(--text-color);
+        justify-content: center;
     }
-
-    .nav-link:hover {
-        background-color: var(--primary-color);
-        color: white;
-        transform: translateX(5px);
+    .progress-ring h4, .progress-ring small {
+        color: #FFD93D !important;
+        text-shadow: 0 2px 8px #FFD93D44;
     }
-
-    .nav-link.active {
-        background-color: var(--primary-color);
-        color: white;
-    }
-
-    .nav-link .notification-badge {
-        background-color: var(--primary-color);
-        color: white;
-        padding: 0.2rem 0.5rem;
-        border-radius: 10px;
-        font-size: 0.8rem;
-        margin-left: auto;
-    }
-
-    .nav-link:hover .notification-badge {
-        background-color: white;
-        color: var(--primary-color);
-    }
-
-    /* Responsive testimonials */
-    .testimonial-card {
-        padding: clamp(1rem, 3vw, 1.5rem);
-        border-left: 4px solid var(--primary-color);
-        margin: clamp(0.5rem, 2vw, 1rem) 0;
-        background-color: white;
-        border-radius: 0 10px 10px 0;
-    }
-
-    /* Utility classes for responsive spacing */
+    /* Misc spacing */
     .mt-responsive { margin-top: clamp(1rem, 3vw, 2rem); }
     .mb-responsive { margin-bottom: clamp(1rem, 3vw, 2rem); }
     .p-responsive { padding: clamp(1rem, 3vw, 2rem); }
+    /* Custom highlight */
+    .highlight {
+        background: var(--accent-gradient);
+        color: #232526;
+        border-radius: 8px;
+        padding: 0.1em 0.5em;
+        box-shadow: 0 2px 8px #FFD93D44;
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+        width: 10px;
+        background: #232526;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #6D5BFF 0%, #FFD93D 100%);
+        border-radius: 8px;
+    }
     </style>
 """, unsafe_allow_html=True)
-
+# ...existing code...
 # Sidebar
 with st.sidebar:
     # Profile Section
@@ -217,10 +242,15 @@ with st.sidebar:
         <div class='profile-section'>
             <img src='https://img.freepik.com/free-vector/businessman-character-avatar-isolated_24877-60111.jpg' 
                  class='profile-image'>
-            <h3 style='margin-top: 1rem;'>Welcome Back!</h3>
+            <h3 style='margin-top: 1rem;'>Welcome {email}!</h3>
             <p style='color: #666;'>Your Career Journey Awaits</p>
         </div>
-    """, unsafe_allow_html=True)
+    """.format(email=st.session_state.user["email"]), unsafe_allow_html=True)
+    
+    # Logout button
+    if st.button("Logout"):
+        logout()
+        st.stop()
     
     # Progress Ring
     st.markdown("""
